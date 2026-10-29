@@ -242,6 +242,11 @@
     .stage.full .stage-header { flex-shrink: 0; }
     .stage.full #terminal { height: auto; flex: 1; min-height: 0; min-width: 0; overflow: hidden; }
     .stage.full .poster { border-radius: 0; }
+    /* In the browser's own fullscreen the game takes the whole screen: no
+       window bar and no margin (Esc leaves). The covering fallback keeps the
+       bar, whose button is the only way out there. */
+    .stage.full:fullscreen { padding: 0; }
+    .stage.full:fullscreen .stage-header { display: none; }
 
     /* Poster overlay: the WASM module is only fetched when the user asks. */
     .poster {
