@@ -52,7 +52,7 @@ jobs:
             mkdir -p "$stage"
             exe="$app"; [ "$os" = windows ] && exe="$app.exe"
             GOOS="$os" GOARCH="$arch" go -C "$dir" build -trimpath -ldflags "-s -w" -o "$stage/$exe" .
-            cp LICENSE "$stage/"
+            cp LICENSE NOTICE "$stage/"
             [ -f "$dir/README.md" ] && cp "$dir/README.md" "$stage/"
             if [ "$os" = windows ]; then
               (cd "$stage" && zip -q "$dist/$name.zip" *)

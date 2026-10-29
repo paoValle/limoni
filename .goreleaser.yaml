@@ -83,36 +83,36 @@ archives:
   - id: zest
     ids: [zest]
     name_template: "zest_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    files: [LICENSE, cmd/zest/README.md]
+    files: [LICENSE, NOTICE, cmd/zest/README.md]
     format_overrides: [{ goos: windows, formats: [zip] }]
   - id: limoni
     ids: [limoni]
     name_template: "limoni-cli_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    files: [LICENSE]
+    files: [LICENSE, NOTICE]
     format_overrides: [{ goos: windows, formats: [zip] }]
   - id: globe
     ids: [globe]
     name_template: "globe_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    files: [LICENSE]
+    files: [LICENSE, NOTICE]
     format_overrides: [{ goos: windows, formats: [zip] }]
   - id: backdrop-shell
     ids: [backdrop-shell]
     name_template: "backdrop-shell_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    files: [LICENSE, apps/backdrop-shell/README.md]
+    files: [LICENSE, NOTICE, apps/backdrop-shell/README.md]
   - id: castle-lemonstein
     ids: [castle-lemonstein]
     name_template: "castle-lemonstein_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    files: [LICENSE]
+    files: [LICENSE, NOTICE]
     format_overrides: [{ goos: windows, formats: [zip] }]
   - id: lemondrop
     ids: [lemondrop]
     name_template: "lemondrop_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    files: [LICENSE]
+    files: [LICENSE, NOTICE]
     format_overrides: [{ goos: windows, formats: [zip] }]
   - id: pikap
     ids: [pikap]
     name_template: "pikap_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    files: [LICENSE, apps/pikap/README.md]
+    files: [LICENSE, NOTICE, apps/pikap/README.md]
     format_overrides: [{ goos: windows, formats: [zip] }]
 
 checksum:
