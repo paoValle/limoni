@@ -83,6 +83,11 @@ func main() {
 	g, mix := newSession(*seed, *mute)
 	g.showFPS = *showFPS
 	ptr := newPointer()
+	web := newWebCanvas()
+	if web != nil && !flagSet("fps") {
+		*fps = 0 // drawn on the page's animation frames instead
+		web.wakeOnFrames()
+	}
 	app := limoni.NewApp(term,
 		limoni.WithFPS(*fps),
 		limoni.WithTitle("Lemon Sweep"),
@@ -103,7 +108,11 @@ func main() {
 		} else {
 			g.event(ev)
 		}
-		g.render(f.Buffer)
+		if web != nil {
+			web.frame(g, f.Buffer.Area)
+		} else {
+			g.render(f.Buffer)
+		}
 		g.countFrame(time.Now())
 		if g.phase == phPlay {
 			f.RenderWidget(crosshairPointer{}, f.Buffer.Area)
@@ -112,6 +121,9 @@ func main() {
 		return !g.quit
 	})
 	ptr.close()
+	if web != nil {
+		web.close()
+	}
 	term.Close()
 	if mix != nil {
 		mix.close()

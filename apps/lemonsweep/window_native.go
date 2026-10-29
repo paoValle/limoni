@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/thebanri/limoni/core/cell"
 )
 
 // No program running in a terminal can hide the mouse pointer: kitty has no
@@ -63,6 +65,14 @@ func windowCmd(kitty, exe string, args []string) *exec.Cmd {
 	cmd.Env = append(os.Environ(), "LEMONSWEEP_WINDOW=1")
 	return cmd
 }
+
+// webCanvas is the browser's (canvas_js.go); a terminal is drawn to.
+type webCanvas struct{}
+
+func newWebCanvas() *webCanvas            { return nil }
+func (*webCanvas) frame(*game, cell.Rect) {}
+func (*webCanvas) close()                 {}
+func (*webCanvas) wakeOnFrames()          {}
 
 func appleTerminal() bool { return os.Getenv("TERM_PROGRAM") == "Apple_Terminal" }
 
