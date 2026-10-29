@@ -64,6 +64,9 @@ func windowCmd(kitty, exe string, args []string) *exec.Cmd {
 	return cmd
 }
 
+// screenRate is for the browser (window_js.go).
+func screenRate() int { return 0 }
+
 func appleTerminal() bool { return os.Getenv("TERM_PROGRAM") == "Apple_Terminal" }
 
 // Apple's Terminal draws block glyphs from the font into a row taller than

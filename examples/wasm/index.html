@@ -199,6 +199,9 @@
       scrollbar-width: none;
     }
     #terminal .xterm-viewport::-webkit-scrollbar { display: none; }
+    /* The cells rarely fill the box exactly: the part of a cell left over
+       goes either side, not all to the right. */
+    #terminal .xterm-screen { margin: 0 auto; }
 
     /* A game opens in most of the window rather than the playground's box:
        the terminal as tall as the window allows below the bar and the
