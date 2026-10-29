@@ -80,17 +80,6 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	// In a browser the game shares its one thread with xterm.js, which shows
-	// a frame only when the screen refreshes: more frames than that only
-	// starve the drawing, and fewer leave a 144 Hz screen at 60. As many as
-	// the screen shows, counted once the terminal is made so the size the
-	// page sends is not missed.
-	if runtime.GOOS == "js" && !flagSet("fps") {
-		*fps = 60
-		if r := screenRate(); r > 0 {
-			*fps = max(60, min(r, 144)) // a busy start counts a 60 Hz screen low
-		}
-	}
 	g, mix := newSession(*seed, *mute)
 	g.showFPS = *showFPS
 	ptr := newPointer()
