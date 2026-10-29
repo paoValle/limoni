@@ -847,6 +847,14 @@
         if (locked()) { send('button', ev.button, false); ev.stopPropagation(); }
       }, true);
       el.addEventListener('contextmenu', (ev) => ev.preventDefault());
+      // While locked, a right click is the game's and nothing else's: taken
+      // at the top, before Firefox, which hitched on each one, does more.
+      document.addEventListener('contextmenu', (ev) => {
+        if (locked()) { ev.preventDefault(); ev.stopImmediatePropagation(); }
+      }, true);
+      document.addEventListener('auxclick', (ev) => {
+        if (locked()) { ev.preventDefault(); ev.stopImmediatePropagation(); }
+      }, true);
     }
 
     const statusText = document.getElementById('status-text');
