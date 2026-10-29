@@ -92,18 +92,28 @@ func main() {
 		limoni.WithMouseMode(limoni.MouseMotion),
 	)
 	last := time.Now()
+	var shown []cell.Cell // the last frame drawn, in the browser
 	err = app.Run(context.Background(), func(f *limoni.Frame, ev *limoni.Event) bool {
-		if ev == nil {
+		if ev == nil && behind() && len(shown) == len(f.Buffer.Content) {
+			// xterm.js has yet to show the last frame: the same again sends
+			// nothing, and the step waits for the next tick.
+			copy(f.Buffer.Content, shown)
+		} else if ev == nil {
 			now := time.Now()
 			ptr.drain(g)
 			g.hint = ptr.problem()
 			g.step(now.Sub(last).Seconds())
 			last = now
+			g.render(f.Buffer)
+			g.countFrame(time.Now())
 		} else {
 			g.event(ev)
+			g.render(f.Buffer)
+			g.countFrame(time.Now())
 		}
-		g.render(f.Buffer)
-		g.countFrame(time.Now())
+		if runtime.GOOS == "js" {
+			shown = append(shown[:0], f.Buffer.Content...)
+		}
 		if g.phase == phPlay {
 			f.RenderWidget(crosshairPointer{}, f.Buffer.Area)
 		}

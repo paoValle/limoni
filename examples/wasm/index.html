@@ -927,7 +927,24 @@
     });
 
     // Go -> xterm.js
-    window.__limoni_output = function (str) { term.write(str); };
+    // Output not yet parsed, or parsed and not yet drawn, tells a game that
+    // shares this thread to skip a frame rather than queue one (Lemon
+    // Sweep's behind), and a frame drawn wakes it for the next. A frame that
+    // changes no row is never drawn, so the wait ends after 100 ms anyway.
+    let unparsed = 0, undrawn = false, lastOutput = 0;
+    window.__limoni_output = function (str) {
+      unparsed++;
+      undrawn = true;
+      lastOutput = performance.now();
+      term.write(str, () => { unparsed--; });
+    };
+    term.onRender(() => {
+      if (unparsed === 0 && undrawn) {
+        undrawn = false;
+        if (window.__limoni_drawn) { window.__limoni_drawn(); }
+      }
+    });
+    window.__limoni_behind = () => (unparsed > 0 || undrawn) && performance.now() - lastOutput < 100;
 
     // xterm.js -> Go
     term.onData(data => {

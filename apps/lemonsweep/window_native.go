@@ -64,6 +64,9 @@ func windowCmd(kitty, exe string, args []string) *exec.Cmd {
 	return cmd
 }
 
+// behind is for the browser (window_js.go); a terminal keeps up or drops frames itself.
+func behind() bool { return false }
+
 func appleTerminal() bool { return os.Getenv("TERM_PROGRAM") == "Apple_Terminal" }
 
 // Apple's Terminal draws block glyphs from the font into a row taller than
