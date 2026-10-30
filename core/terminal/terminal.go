@@ -591,7 +591,7 @@ func (t *Terminal) present(t0 time.Time) error {
 			if imagesChanged && proto == graphics.ProtocolOverlay {
 				t.placeOverlay(imageRegions)
 			} else if imagesChanged && proto == graphics.ProtocolKitty {
-				t.writeBuf = t.kitty.place(t.writeBuf, imageRegions, cellW, cellH)
+				t.writeBuf = t.kitty.place(t.writeBuf, imageRegions, cellW, cellH, needsFullClear || layersChanged)
 			} else if imagesChanged {
 				for _, reg := range imageRegions {
 					zIndex := reg.ZIndex

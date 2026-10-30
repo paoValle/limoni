@@ -8,6 +8,24 @@ a patch bump (`v0.x.y`) does not.
 
 ## [Unreleased]
 
+### Added
+
+- `graphics.AppendKittyPlaceID` places a Kitty picture under a placement
+  id, and `graphics.AppendKittyDeletePlacement` deletes one placement.
+
+### Changed
+
+- With Kitty's protocol, only the placements that changed are sent. Each
+  placement keeps an id tied to its cells; a frame places a new picture
+  before deleting the old one, and a full redraw still places everything
+  again. On a map of about a thousand small pictures a move went from
+  117 KB to about 5 KB, and Konsole no longer flashes between deleting and
+  placing. A picture that moves to new cells takes over a placement of the
+  same picture that is no longer used and moves it in one step, so a
+  scrolling map costs a placement per tile, as before, and nothing is
+  deleted until everything is placed. Frames still draw with 0
+  allocations.
+
 ## [v0.16.0] — 2026-10-27
 
 ### Breaking

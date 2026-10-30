@@ -113,7 +113,7 @@ func TestKittyClipsASmallPictureInItsOwnPixels(t *testing.T) {
 	part := full.SubImage(image.Rect(0, 20, 50, 40)) // its lower half
 	clip := &graphics.Clip{Image: part, Full: full, Cols: 10, Rows: 4, Top: 2, Bottom: 4}
 	var k kittyImages
-	out := string(k.place(nil, []ImageRegion{{Area: cell.NewRect(0, 0, 10, 2), Img: clip}}, 10, 20))
+	out := string(k.place(nil, []ImageRegion{{Area: cell.NewRect(0, 0, 10, 2), Img: clip}}, 10, 20, false))
 	if !strings.Contains(out, ",s=50,v=40") {
 		t.Fatalf("the picture was not sent at its own size: %.120q", out)
 	}
