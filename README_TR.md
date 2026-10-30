@@ -353,6 +353,7 @@ bak.
 Herhangi birini `go run ./examples/<ad>` ile çalıştırabilirsin. Repoyu klonlamadan:
 `go run github.com/thebanri/limoni/examples/3d_viewer@latest`.
 Tüm örnekler: [docs/tr/examples.md](docs/tr/examples.md).
+[Oyunlar](#bir-de-oyunlar) ve tam uygulamalar [`apps/`](apps) altında, her biri ayrı bir modül.
 
 ---
 

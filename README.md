@@ -368,6 +368,7 @@ Coming from Bubble Tea? See the [migration guide](docs/bubbletea-migration.md).
 Run any of them with `go run ./examples/<name>`, or without cloning:
 `go run github.com/thebanri/limoni/examples/3d_viewer@latest`.
 All examples: [docs/examples.md](docs/examples.md).
+The [games](#and-some-games) and full applications live in [`apps/`](apps), each its own module.
 
 ---
 
