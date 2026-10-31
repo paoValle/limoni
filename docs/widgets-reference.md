@@ -414,7 +414,7 @@ help := widgets.NewHelpOverlay(km).WithTitle("Keys")
 f.RenderWidget(help, area)
 ```
 
-`WithScopes("dialog")` limits the card to one focus scope; without it the card shows the global bindings only. The card draws in `0 B/op` after its first frame (the layout buffers live in `HelpState`), and exposes every row as a semantic node, so screen readers and `uitest` can address a key by its label.
+`WithScopes("dialog")` limits the card to one focus scope; without it the card shows the global bindings only. The card draws in `0 B/op` after its first frame (the layout buffers live in `HelpState`), and exposes every row as a semantic node — the action as its label and the key as its value — so screen readers and `uitest` can find a row by the action it runs.
 
 ---
 

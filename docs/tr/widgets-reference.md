@@ -319,7 +319,7 @@ help := widgets.NewHelpOverlay(km).WithTitle("Tuşlar")
 f.RenderWidget(help, area)
 ```
 
-`WithScopes("dialog")` kartı tek bir odak kapsamına indirir; verilmezse yalnızca global kısayollar gösterilir. İlk kareden sonra çizim `0 B/op` ayırır (düzen tamponları `HelpState` içinde yaşar) ve her satır semantik düğüm olarak yayınlanır, böylece ekran okuyucular ve `uitest` bir tuşu etiketiyle bulabilir.
+`WithScopes("dialog")` kartı tek bir odak kapsamına indirir; verilmezse yalnızca global kısayollar gösterilir. İlk kareden sonra çizim `0 B/op` ayırır (düzen tamponları `HelpState` içinde yaşar) ve her satır semantik düğüm olarak yayınlanır: etiket eylem, değer tuştur, böylece ekran okuyucular ve `uitest` bir satırı çalıştırdığı eylemle bulabilir.
 
 ---
 

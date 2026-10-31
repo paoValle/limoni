@@ -38,7 +38,10 @@ type HelpState struct {
 	// not disturb the layout.
 	items []helpItem
 	view  []HelpEntry
-	rows  []accessibility.Node
+	// placed is the layout the last walk produced: the rows that fit, in draw
+	// order. Draw and AccessibilityNode read it instead of walking twice.
+	placed []helpPlaced
+	rows   []accessibility.Node
 }
 
 // helpItem is one display row of the card before it is placed: a group heading
@@ -46,6 +49,14 @@ type HelpState struct {
 type helpItem struct {
 	heading bool
 	entry   int // index into HelpState.shown for a binding row
+}
+
+// helpPlaced is one row of the laid-out card: the item it shows and the cell it
+// starts at.
+type helpPlaced struct {
+	item  helpItem
+	x, y  uint16
+	width uint16
 }
 
 // NewHelpState returns a new HelpState.
@@ -338,22 +349,65 @@ func (c *helpCursor) width(areaWidth uint16) uint16 {
 	return uint16(c.perColumn)
 }
 
-// layoutRows returns how many display rows the card has and how many of them
-// fit, so the caller can clamp the scroll offset.
-func (h *HelpOverlay) layoutRows(area cell.Rect, keyW, labelW, columns int) (total, visible int) {
+// cursorFor returns the cursor the card lays its rows out with: the columns
+// that fit in the area, and the rows left below the title.
+func (h *HelpOverlay) cursorFor(area cell.Rect, top uint16) helpCursor {
+	keyW, labelW, columns := h.widths(area)
+	cursor := helpCursor{perColumn: keyW + helpGap + labelW + helpPad, columns: columns}
+	cursor.columnHeight = int(area.Y+area.Height) - int(top)
+	if cursor.columnHeight < 0 {
+		cursor.columnHeight = 0
+	}
+	if cursor.perColumn < 1 {
+		cursor.perColumn = 1
+	}
+	return cursor
+}
+
+// layout walks the card's rows from the given offset into the state's placed
+// buffer, and reports whether the walk reached the last item.
+//
+// A row scrolled off leaves the cursor where it is, so an offset lays the rows
+// below it out from the top of the card: that is what makes the offset the card
+// scrolls to the one whose walk reaches the last item. Draw and
+// AccessibilityNode both read what it placed, so the rows one paints are the
+// rows the other reports.
+func (h *HelpOverlay) layout(area cell.Rect, cursor helpCursor, top uint16, offset int) (placed []helpPlaced, reachedLast bool) {
 	st := h.State
-	if st == nil {
-		return 0, 0
+	st.placed = st.placed[:0]
+	for _, item := range st.items {
+		if offset > 0 {
+			offset--
+			continue
+		}
+		if item.heading {
+			cursor.nextHeading()
+		}
+		if !cursor.fits() {
+			return st.placed, false
+		}
+		st.placed = append(st.placed, helpPlaced{
+			item:  item,
+			x:     cursor.x(area.X),
+			y:     top + uint16(cursor.row),
+			width: cursor.width(area.Width),
+		})
+		cursor.nextRow()
 	}
-	total = len(st.items)
-	columnHeight := int(area.Height)
-	if h.Title != "" {
-		columnHeight--
+	return st.placed, true
+}
+
+// scrollLimit returns the smallest offset whose walk reaches the last item, so
+// the card scrolls exactly as far as its content. Counting cells is not enough:
+// a heading that moves to the next column leaves one empty, so only the walk
+// knows how many rows fit.
+func (h *HelpOverlay) scrollLimit(area cell.Rect, cursor helpCursor, top uint16) int {
+	for offset := 0; offset < len(h.State.items); offset++ {
+		if _, reachedLast := h.layout(area, cursor, top, offset); reachedLast {
+			return offset
+		}
 	}
-	if columnHeight < 0 {
-		columnHeight = 0
-	}
-	return total, columnHeight * columns
+	return 0
 }
 
 // Draw draws the help card into the area.
@@ -395,68 +449,32 @@ func (h *HelpOverlay) Draw(ctx cell.Context, buf *buffer.Buffer) {
 		return
 	}
 
-	keyW, labelW, columns := h.widths(area)
-	cursor := helpCursor{perColumn: keyW + helpGap + labelW + helpPad, columns: columns}
-	cursor.columnHeight = int(area.Y+area.Height) - int(top)
-	if cursor.columnHeight <= 0 {
-		return
-	}
-	if cursor.perColumn < 1 {
-		cursor.perColumn = 1
-	}
-
-	total, visible := h.layoutRows(area, keyW, labelW, columns)
-	maxOffset := total - visible
-	if maxOffset < 0 {
-		maxOffset = 0
-	}
+	cursor := h.cursorFor(area, top)
+	limit := h.scrollLimit(area, cursor, top)
 	offset := h.State.Offset
-	if offset > maxOffset {
-		offset = maxOffset
+	if offset > limit {
+		offset = limit
 	}
 	if offset < 0 {
 		offset = 0
 	}
 	h.State.Offset = offset
-	if ctx.RegisterScroll != nil && maxOffset > 0 {
-		ctx.RegisterScroll(area, &h.State.Offset, maxOffset)
+	if ctx.RegisterScroll != nil && limit > 0 {
+		ctx.RegisterScroll(area, &h.State.Offset, limit)
 	}
 
-	for _, item := range h.State.items {
-		if item.heading {
-			cursor.nextHeading()
-			if !cursor.fits() {
-				return
-			}
-			if offset > 0 {
-				offset--
-				continue
-			}
-			category := h.State.entries[h.State.shown[item.entry]].Category
-			if width := cursor.width(area.Width); width > 0 {
-				buf.SetStringWithin(cursor.x(area.X), top+uint16(cursor.row), helpHeading(category), catStyle, width)
-			}
-			cursor.nextRow()
+	placed, _ := h.layout(area, cursor, top, offset)
+	for _, row := range placed {
+		if row.item.heading {
+			category := h.State.entries[h.State.shown[row.item.entry]].Category
+			buf.SetStringWithin(row.x, row.y, helpHeading(category), catStyle, row.width)
 			continue
 		}
-		if !cursor.fits() {
-			cursor.nextRow()
-			continue
+		entry := h.State.entries[h.State.shown[row.item.entry]]
+		used := buf.SetStringWithin(row.x, row.y, entry.Key, keyStyle, row.width)
+		if used+helpGap < row.width {
+			buf.SetStringWithin(row.x+used+helpGap, row.y, entry.Label, cardStyle, row.width-used-helpGap)
 		}
-		if offset > 0 {
-			offset--
-			continue
-		}
-		entry := h.State.entries[h.State.shown[item.entry]]
-		if width := cursor.width(area.Width); width > 0 {
-			x := cursor.x(area.X)
-			y := top + uint16(cursor.row)
-			used := buf.SetStringWithin(x, y, entry.Key, keyStyle, width)
-			if used+helpGap < width {
-				buf.SetStringWithin(x+used+helpGap, y, entry.Label, cardStyle, width-used-helpGap)
-			}
-		}
-		cursor.nextRow()
 	}
 }
 
@@ -522,12 +540,14 @@ func (h HelpOverlay) Measure(maxArea cell.Rect) layout.Measure {
 
 // AccessibilityNode returns the semantic node description for HelpOverlay: one
 // child per row the card shows, so a screen reader or an automation selector can
-// address "Ctrl+S" and the action it runs. The rows follow the same pagination
-// and scroll offset as Draw.
+// address "Save file" and the key it runs on. The rows come from the same walk
+// Draw uses, so the tree holds the rows the card paints.
 //
-// The row nodes are written into a buffer owned by State and reused on every
-// frame, so building them does not allocate once the card has been drawn at its
-// size. A heading row is a list item whose Value is empty.
+// A binding row's Label is the action and its Value the key, the way every other
+// list row labels what it shows, so a selector finds it by the action's name. The
+// row nodes are written into a buffer owned by State and reused on every frame,
+// so building them does not allocate once the card has been drawn at its size. A
+// heading row is a list item whose Value is empty.
 func (h HelpOverlay) AccessibilityNode(bounds cell.Rect, focused bool) accessibility.Node {
 	h.refresh()
 	state := accessibility.NodeState(0)
@@ -541,71 +561,40 @@ func (h HelpOverlay) AccessibilityNode(bounds cell.Rect, focused bool) accessibi
 
 	var rows []accessibility.Node
 	if h.State != nil && len(h.State.shown) > 0 {
-		keyW, labelW, columns := h.widths(bounds)
-		cursor := helpCursor{perColumn: keyW + helpGap + labelW + helpPad, columns: columns}
 		top := bounds.Y
 		if h.Title != "" {
 			top++
 		}
-		cursor.columnHeight = int(bounds.Y+bounds.Height) - int(top)
-		if cursor.columnHeight < 0 {
-			cursor.columnHeight = 0
-		}
-		if cursor.perColumn < 1 {
-			cursor.perColumn = 1
-		}
-
-		_, visible := h.layoutRows(cell.Rect{Height: bounds.Height}, keyW, labelW, columns)
-		maxOffset := len(h.State.items) - visible
-		if maxOffset < 0 {
-			maxOffset = 0
-		}
+		cursor := h.cursorFor(bounds, top)
+		limit := h.scrollLimit(bounds, cursor, top)
 		offset := h.State.Offset
-		if offset > maxOffset {
-			offset = maxOffset
+		if offset > limit {
+			offset = limit
 		}
 		if offset < 0 {
 			offset = 0
 		}
 
 		rows = h.State.rows[:0]
-		for _, item := range h.State.items {
-			if item.heading {
-				cursor.nextHeading()
-				if !cursor.fits() {
-					break
-				}
-				if offset > 0 {
-					offset--
-					continue
-				}
-				category := h.State.entries[h.State.shown[item.entry]].Category
+		placed, _ := h.layout(bounds, cursor, top, offset)
+		for _, row := range placed {
+			entry := h.State.entries[h.State.shown[row.item.entry]]
+			if row.item.heading {
 				rows = append(rows, accessibility.Node{
 					Role:   accessibility.RoleListItem,
-					Label:  helpHeading(category),
-					Bounds: cell.Rect{X: cursor.x(bounds.X), Y: top + uint16(cursor.row), Width: cursor.width(bounds.Width), Height: 1},
+					Label:  helpHeading(entry.Category),
+					Bounds: cell.Rect{X: row.x, Y: row.y, Width: row.width, Height: 1},
 				})
-				cursor.nextRow()
 				continue
 			}
-			if !cursor.fits() {
-				cursor.nextRow()
-				continue
-			}
-			if offset > 0 {
-				offset--
-				continue
-			}
-			entry := h.State.entries[h.State.shown[item.entry]]
 			rows = append(rows, accessibility.Node{
 				Role:     accessibility.RoleListItem,
-				Label:    entry.Key,
-				Value:    entry.Label,
-				Bounds:   cell.Rect{X: cursor.x(bounds.X), Y: top + uint16(cursor.row), Width: cursor.width(bounds.Width), Height: 1},
-				Position: item.entry + 1,
+				Label:    entry.Label,
+				Value:    entry.Key,
+				Bounds:   cell.Rect{X: row.x, Y: row.y, Width: row.width, Height: 1},
+				Position: row.item.entry + 1,
 				SetSize:  len(h.State.shown),
 			})
-			cursor.nextRow()
 		}
 		h.State.rows = rows
 	}

@@ -198,6 +198,21 @@ func TestHelpOverlayAccessibilityNode(t *testing.T) {
 	if keys != 4 || categories != 3 {
 		t.Errorf("node has %d binding rows and %d headings, want 4 and 3", keys, categories)
 	}
+
+	// A row is labelled with the action it runs, and carries the key as its
+	// value, so a selector finds it by "Save file".
+	found := false
+	for _, child := range node.Children {
+		if child.Label == "Save file" {
+			found = true
+			if child.Value != "Ctrl+S" {
+				t.Errorf("row %q has value %q, want the key Ctrl+S", child.Label, child.Value)
+			}
+		}
+	}
+	if !found {
+		t.Error(`no row is labelled "Save file"`)
+	}
 }
 
 func TestHelpOverlayDrawsAnEmptyCardWithoutAManager(t *testing.T) {
@@ -322,4 +337,29 @@ func TestHelpOverlayNeverLeavesAHeadingAloneInAColumn(t *testing.T) {
 	if !strings.Contains(rows[0], "Application") {
 		t.Errorf("first row = %q, want the first heading", rows[0])
 	}
+}
+
+// TestHelpOverlayEveryRowReachable pins the blocker a review found: the card
+// counted columnHeight*columns cells, but a heading that moves to the next
+// column leaves a cell empty, so the last rows were never reachable.
+func TestHelpOverlayEveryRowReachable(t *testing.T) {
+	km, _ := helpTestManager()
+	help := NewHelpOverlay(km)
+	for offset := 0; offset < 10; offset++ {
+		help.State.Offset = offset
+		if strings.Contains(helpJoined(helpRows(help, 60, 2)), "Next field") {
+			// The tree comes from the same walk, so the row is in it too.
+			found := false
+			for _, child := range help.AccessibilityNode(cell.NewRect(0, 0, 60, 2), true).Children {
+				if child.Label == "Next field" {
+					found = true
+				}
+			}
+			if !found {
+				t.Errorf("AccessibilityNode at offset %d is missing %q", offset, "Next field")
+			}
+			return
+		}
+	}
+	t.Fatal(`"Next field" is never drawn at 60x2`)
 }
